@@ -1,8 +1,3 @@
-/**************************
-   socket example, client
-   fall 2017
-**************************/
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -17,12 +12,6 @@
 //Define bytes to transferred for each iteration
 #define BUFF_LEN 10
 
-int main(int, char *[]);
-
-
-/********************
- * main
- ********************/
 int main(int argc, char *argv[])
 {
     size_t r;
@@ -97,7 +86,7 @@ int main(int argc, char *argv[])
     }
     
     close(sockfd);
-    fclose(fp); //Question: I can't close it outside the while, right?
+    fclose(fp);
     
     return 0;
 }

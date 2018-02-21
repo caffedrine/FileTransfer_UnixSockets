@@ -1,8 +1,3 @@
-/**************************
-Nithya Geereddy: Lab 2
-COEN 146
-***************************/
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -18,11 +13,6 @@ COEN 146
 #define BUFF_LEN 5
 #define MAX_FILE_LENGTH 30
 
-int main(int, char *[]);
-
-/*********************
- * main
- *********************/
 int main(int argc, char *argv[])
 {
     if(argc < 2)    //first argument is app name
@@ -71,7 +61,7 @@ int main(int argc, char *argv[])
     
     // receive dest file's name and open it
     int buffer_index = 0;
-    while(buffer_index < MAX_FILE_LENGTH && 1 == read(connfd, &buff_filename[buffer_index], 1) ) // to get corect file name, red char by char until '\0'
+    while(buffer_index < MAX_FILE_LENGTH && 1 == read(connfd, &buff_filename[buffer_index], 1) ) // to get corect file name, raed char by char until '\0'
     {
         if(buff_filename[buffer_index] == '\0' || buff_filename[buffer_index] == '\n') // '\n' is just for debugging
         {
@@ -101,6 +91,7 @@ int main(int argc, char *argv[])
         if( n < BUFF_LEN)
             break;
     }
+    
     printf("done!\n");
     fclose(dest);
     close(connfd);
