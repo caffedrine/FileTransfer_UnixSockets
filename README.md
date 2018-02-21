@@ -1,13 +1,7 @@
 # Basic File Transfer (FT) using Unix Sockets
 
-Usage:
+Some file transfer (FT) implementations in C using linux sockets ^^_^^
 
 ```
-./Server 5555
-```
 
-and
-
-```
-$ ./Client 5555 127.0.0.1 input.txt output.txt
 ```
