@@ -10,14 +10,14 @@
 
 struct HEADER       // header structure
 {
-    int32 seq_ack;
-    int len;
-    int cksum;
+    uint32_t seq_ack;
+    uint32_t len;
+    uint32_t cksum;
 };
 
 struct PACKET       // packet frame structure
 {
-    struct HEADER;
+    struct HEADER Header;
     char data[BUFF_LEN];
 };
 
@@ -52,28 +52,47 @@ int main(void)
     {
         die("Can't bind socket...");
     }
+
+    // Define packet structure
+    struct PACKET Packet;
     
     //keep listening for data
     while(1)
     {
-        printf("Waiting for data...\n");
+        printf("-------------------\nWaiting for clients ACK0...\n");
         fflush(stdout);
         
-        //try to receive some data, this is a blocking call
-        if ((recv_len = recvfrom(s, buf, BUFF_LEN, 0, (struct sockaddr *) &si_other, &slen)) == -1)
+        // Waiting for ACK0 fron client
+        if ( recvfrom(s, &Packet.Header.seq_ack, sizeof(uint32_t), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
-            die("recvfrom()");
+            continue;
+        }   // Process received ACK0
+        Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
+        printf("Got ACK0 with value %d\n", Packet.Header.seq_ack);
+        
+        // Now that client asked to send data, send back ACK1
+        ++Packet.Header.seq_ack;
+        uint32_t converted_ack = htonl(Packet.Header.seq_ack);
+        if (sendto(s, &converted_ack, sizeof(converted_ack) , 0 , (struct sockaddr *) &si_other, slen)==-1)
+        {
+            printf("Failed to send ACK1 response...\n");
+            continue;
         }
+        printf("ACK1 with value %d was send to client...\n", Packet.Header.seq_ack);
+        
+        // Wait for data length
+        if ( recvfrom(s, &Packet.Header.len, sizeof(uint32_t), 0, (struct sockaddr *) &si_other, &slen) == -1)
+        {
+            printf("Failed to receive data length...\n");
+            continue;
+        }
+        Packet.Header.len = ntohl(Packet.Header.len);
+        printf("Data length to be received is %d bytes", Packet.Header.len);
         
         //print details of the client/peer and the data received
-        printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-        printf("Data: %s\n" , buf);
+        //printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
         
-        //now reply the client with the same data
-        if (sendto(s, "ACK\0", 4, 0, (struct sockaddr*) &si_other, slen) == -1)
-        {
-            die("sendto()");
-        }
+        break;
     }
     
     fclose(s);
