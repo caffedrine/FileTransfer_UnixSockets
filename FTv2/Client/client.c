@@ -48,7 +48,6 @@ uint32_t getChecksum(const struct PACKET packet)
         for(int i = 0; i <= 7; i++)
             setBitsCount += (curr & ((i << 1) - 1));
         
-        
         sum += setBitsCount;
     }
     return sum;
@@ -57,7 +56,7 @@ uint32_t getChecksum(const struct PACKET packet)
 int main(void)
 {
     struct PACKET packet;
-    strcpy(packet.data, "aaaaaaaa");
+    strcpy(packet.data, "12345679");
     
     int cs = getChecksum(packet);
     
