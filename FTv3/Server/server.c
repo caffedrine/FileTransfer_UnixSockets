@@ -108,36 +108,34 @@ int main(void)
     }
     
     // Define packet structure
-    struct PACKET Packet;
+    struct PACKET PacketSend;
+    struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
     
     //keep listening for data
     while(1)
     {
-        memset(Packet.data, '\0', UDP_BUFF_LEN);
-    
-        printf("------------\nWaiting for ACK0...");
-        fflush(stdout);
-        
-        if(recvfrom(socketfd, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other,
+        // Listening for ACK0
+        printf("------------\nWaiting for ACK0..."); fflush(stdout);
+        if(recvfrom(socketfd, &PacketRecv, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other,
                     &slen) == -1)
         {
             // if there was an error on receiving, return 0;
             printf("FAILED\n");
             return 0;
         }
-        Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
-        printf("OK: got ACK0 with value %d\n", Packet.Header.seq_ack);
+        printf("OK: %d\n", PacketRecv.Header.seq_ack);
         
-        // Wait for data length
-        if(recvfrom(socketfd, &Packet.Header.len, sizeof(Packet.Header.len), 0, (struct sockaddr *) &si_other,
+        
+        // Wait for data and data length
+        if(recvfrom(socketfd, &PacketRecv, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other,
                     &slen) == -1)
         {
             printf("Failed to receive data length...\n");
             continue;
         }
-        Packet.Header.len = ntohl(Packet.Header.len);
-        printf("Data length to be received is %d bytes\n", Packet.Header.len);
+        printf("Got %d bytes: %s\n", PacketRecv.Header.len, PacketRecv.data);
         
+        /*
         // Read data only if length > 0
         if(Packet.Header.len > 0)
         {
@@ -223,6 +221,7 @@ int main(void)
             continue;
         }
         printf("Checksum with value %d was send to client...\n", Packet.Header.cksum);
+         */
     }
     
     fclose(fp);

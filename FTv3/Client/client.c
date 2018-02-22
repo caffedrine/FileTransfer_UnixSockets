@@ -68,7 +68,8 @@ int main(void)
 {
     
     struct sockaddr_in si_other;
-    int s, i, slen = sizeof(si_other);
+    int s, i;
+    socklen_t slen = sizeof(si_other);
     char buf[BUFF_LEN];
     char message[BUFF_LEN];
     
@@ -89,7 +90,7 @@ int main(void)
     
     // Packet structure
     struct PACKET PacketSend;
-    struct PACKET *packetRecv = (struct PACKET *)malloc(sizeof(struct PACKET));
+    struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
     short retry = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
     
     while(1)
@@ -100,16 +101,11 @@ int main(void)
             printf("-----------\nEnter message (max 10): \n");
             gets(message);
             strcpy(PacketSend.data, message);
-            PacketSend.Header.seq_ack = (uint32_t)retry;                        // set 1 if packet is retransmitted
-            PacketSend.Header.len = (uint32_t) strlen(PacketSend.data);
-            PacketSend.Header.cksum = getChecksum(PacketSend);                  // also fetch checksum
         }
         
         // Send ACK0 --------------------------------------------------------------------------------------------------
         PacketSend.Header.seq_ack = (uint32_t)retry;
         PacketSend.Header.len = 0;
-        PacketSend.Header.cksum = 0;
-        memset(PacketSend.data, 0, sizeof(PacketSend.data));
         if(sendto(s, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending ACK0...\n");
@@ -117,25 +113,18 @@ int main(void)
         }
         printf("ACK0 send with value %d\n", PacketSend.Header.seq_ack);
         
-        
-        /*
-        // Now send the length of data we are about to send -----------------------------------------------------------
-        uint32_t converted_len = htonl(Packet.Header.len);
-        if(sendto(s, &converted_len, sizeof(sizeof(uint32_t)), 0, (struct sockaddr *) &si_other, slen) == -1)
+        // Send packet with it's payload ------------------------------------------------------------------------------
+        PacketSend.Header.len = (uint32_t) strlen(PacketSend.data);
+        PacketSend.Header.cksum = getChecksum(PacketSend);
+        strcpy(PacketSend.data, message);
+        if(sendto(s, &PacketSend, sizeof(sizeof(uint32_t)), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending data length...\n");
             continue;
         }
-        printf("The length %d was passed to server...\n", Packet.Header.len);
+        printf("Send %d bytes: %s \n", PacketSend.Header.len, PacketSend.data);
         
-        // Now proceed with sending the actual data -------------------------------------------------------------------
-        if(sendto(s, &Packet.data, (int) strlen(Packet.data), 0, (struct sockaddr *) &si_other, slen) == -1)
-        {
-            printf("Error sending data...\n");
-            continue;
-        }
-        printf("Send chunk of %d bytes with content: %s\n", Packet.Header.len, Packet.data);
-        
+        /*
         // Wait for ACK1 ----------------------------------------------------------------------------------------------
         if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
