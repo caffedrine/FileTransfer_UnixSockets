@@ -55,7 +55,7 @@ uint32_t getChecksum(const struct PACKET packet)
 void checksumTest()
 {
     struct PACKET packet;
-    strcpy(packet.data, "12345679");
+    strcpy(packet.data, "1234");
     
     int cs = getChecksum(packet);
     
@@ -66,27 +66,27 @@ void checksumTest()
 
 int main(void)
 {
-    
     struct sockaddr_in si_other;
-    int s, i;
+    int sockfd, i;
     socklen_t slen = sizeof(si_other);
     char buf[BUFF_LEN];
     char message[BUFF_LEN];
     
-    if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-    {
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
         die("Can allocate socket identifier!");
-    }
     
     memset((char *) &si_other, 0, sizeof(si_other));
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons(PORT);
     
     if(inet_aton(SERVER, &si_other.sin_addr) == 0)
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
+        die("inet_aton() failed\n");
+    
+    // Setting up timeout
+    struct timeval tv;
+    tv.tv_sec = 5;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+        die("Error on socket timeout!");
     
     // Packet structure
     struct PACKET PacketSend;
@@ -103,68 +103,38 @@ int main(void)
             strcpy(PacketSend.data, message);
         }
         
-        // Send ACK0 --------------------------------------------------------------------------------------------------
-        PacketSend.Header.seq_ack = (uint32_t)retry;
-        PacketSend.Header.len = 0;
-        if(sendto(s, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
-        {
-            printf("Error sending ACK0...\n");
-            continue;
-        }
-        printf("ACK0 send with value %d\n", PacketSend.Header.seq_ack);
-        
-        // Send packet with it's payload ------------------------------------------------------------------------------
-        PacketSend.Header.len = (uint32_t) strlen(PacketSend.data);
+        // Send first packet
+        PacketSend.Header.seq_ack = 0;
+        PacketSend.Header.len = (uint32_t)strlen(PacketSend.data);
         PacketSend.Header.cksum = getChecksum(PacketSend);
-        strcpy(PacketSend.data, message);
-        if(sendto(s, &PacketSend, sizeof(sizeof(uint32_t)), 0, (struct sockaddr *) &si_other, slen) == -1)
+        if(sendto(sockfd, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending data length...\n");
+            retry = 1;
             continue;
         }
-        printf("Send %d bytes: %s \n", PacketSend.Header.len, PacketSend.data);
+        printf("Send %d bytes: %s, checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data, PacketSend.Header.cksum, PacketSend.Header.seq_ack);
         
-        /*
-        // Wait for ACK1 ----------------------------------------------------------------------------------------------
-        if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
+        // Now wait for acknowledge
+        if(recvfrom(sockfd, &PacketRecv.Header.seq_ack, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
-            printf("ACK1 not received\n");
+            printf("ACK1 not received -> RETRY\n");
+            retry = 1;
             continue;
         }
-        Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
-        printf("ACK1 received with value %d\n", Packet.Header.seq_ack);
         
-        if(strlen(Packet.data) == 0)        // if empty packet was send this mean that program can exit
+        // Chck whether right packet was received or not
+        if(PacketRecv.Header.seq_ack == 0)
         {
-            printf("Final packed send! Program will exit now!\n");
-            break;
-        }
-        
-        // Process process checksum received to be sure of data integrity----------------------------------------------
-        uint32_t recvChecksum;
-        if(recvfrom(s, &recvChecksum, sizeof(recvChecksum), 0, (struct sockaddr *) &si_other, &slen) == -1)
-        {
-            printf("Checksum not received...\n");
-            continue;
-        }
-        recvChecksum = ntohl(recvChecksum);
-        printf("Checksum from server: %d\n", recvChecksum);
-        printf("Checksum calculated: %d\n", Packet.Header.cksum);
-        
-        // Compare checksums to assuse data integrity -----------------------------------------------------------------
-        if(recvChecksum != Packet.Header.cksum)
-        {
-            printf("Result: Checksum NOT OK!\n");
+            printf("ACK is 0 -> RETRY\n");
             retry = 1;
         }
         else
         {
-            printf("Result: Checksum OK!\n");
+            printf("Packet succesfully send!\n");
             retry = 0;
         }
-         */
     }
     
-    close(s);
     return 0;
 }
