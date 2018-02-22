@@ -53,7 +53,7 @@ uint32_t getChecksum(const struct PACKET packet)
     return sum;
 }
 
-int main(void)
+void checksumTest()
 {
     struct PACKET packet;
     strcpy(packet.data, "12345679");
@@ -63,6 +63,10 @@ int main(void)
     printf("Checksum for '%s' is %d", packet.data, cs);
     
     exit(1);
+}
+
+int main(void)
+{
     
     struct sockaddr_in si_other;
     int s, i, slen = sizeof(si_other);
@@ -95,7 +99,7 @@ int main(void)
         strcpy(Packet.data, message);
         Packet.Header.seq_ack = 0;
         Packet.Header.len = (uint32_t) strlen(Packet.data);
-        Packet.Header.cksum = getChecksum(Packet);             // also fetch checksum
+        Packet.Header.cksum = getChecksum(Packet);                      // also fetch checksum
         
         // Send ACK0
         uint32_t converted_ack = htonl(Packet.Header.seq_ack);          // make sure it is in the proper format to be send
