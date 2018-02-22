@@ -27,9 +27,41 @@ void die(char *s)
     exit(1);
 }
 
-uint32_t getChecksum(char *str)
+uint32_t getChecksum(const struct PACKET packet)
 {
-    return 100;
+    char xor_element = 'A';
+    uint32_t sum = 0;
+    
+    for(int i=0; i < strlen(packet.data); i++)  // iterate over all chars from string9
+    {
+        char curr = packet.data[i];
+        char xored = xor_element ^ curr;
+        
+        // get sum of bits
+        int setBitsCount = 0;
+        for(int i = 0; i <= 7; i++)
+            setBitsCount += (xored & ((i << 1) - 1));
+        
+        sum += setBitsCount;
+    }
+    return sum;
+}
+
+void checksumTest()
+{
+    struct PACKET packet;
+    strcpy(packet.data, "12345679");
+    
+    int cs = getChecksum(packet);
+    
+    printf("Checksum for '%s' is %d", packet.data, cs);
+    
+    exit(1);
+}
+
+void processRecvData(const struct PACKET packet)
+{
+
 }
 
 int main(void)
@@ -104,7 +136,7 @@ int main(void)
         printf("ACK1 with value %d was send to client...\n", Packet.Header.seq_ack);
         
         // Now send back checksum to make sure this is the date client sends to us
-        Packet.Header.cksum = getChecksum(Packet.data);
+        Packet.Header.cksum = getChecksum(Packet);
         uint32_t checksum_converted = htonl(Packet.Header.cksum);   // convert checksum ina  specific format to be send via network
         if (sendto(s, &checksum_converted, sizeof(checksum_converted), 0, (struct sockaddr *) &si_other, slen)==-1)
         {
