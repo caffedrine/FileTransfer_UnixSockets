@@ -88,7 +88,8 @@ int main(void)
     }
     
     // Packet structure
-    struct PACKET Packet;
+    struct PACKET PacketSend;
+    struct PACKET *packetRecv = (struct PACKET *)malloc(sizeof(struct PACKET));
     short retry = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
     
     while(1)
@@ -98,23 +99,27 @@ int main(void)
             //Now that we received ACK we can stard sending actual payload
             printf("-----------\nEnter message (max 10): \n");
             gets(message);
-            strcpy(Packet.data, message);
+            strcpy(PacketSend.data, message);
+            PacketSend.Header.seq_ack = (uint32_t)retry;                        // set 1 if packet is retransmitted
+            PacketSend.Header.len = (uint32_t) strlen(PacketSend.data);
+            PacketSend.Header.cksum = getChecksum(PacketSend);                  // also fetch checksum
         }
         
-        Packet.Header.seq_ack = (uint32_t)retry;                        // set 1 if packet is retransmitted
-        Packet.Header.len = (uint32_t) strlen(Packet.data);
-        Packet.Header.cksum = getChecksum(Packet);                      // also fetch checksum
-        
-        // Send ACK0
-        uint32_t converted_ack = htonl(Packet.Header.seq_ack);          // make sure it is in the proper format to be send
-        if(sendto(s, &converted_ack, sizeof(uint32_t), 0, (struct sockaddr *) &si_other, slen) == -1)
+        // Send ACK0 --------------------------------------------------------------------------------------------------
+        PacketSend.Header.seq_ack = (uint32_t)retry;
+        PacketSend.Header.len = 0;
+        PacketSend.Header.cksum = 0;
+        memset(PacketSend.data, 0, sizeof(PacketSend.data));
+        if(sendto(s, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending ACK0...\n");
             continue;
         }
-        printf("ACK0 send with value %d\n", Packet.Header.seq_ack);
+        printf("ACK0 send with value %d\n", PacketSend.Header.seq_ack);
         
-        // Now send the length of data we are about to send
+        
+        /*
+        // Now send the length of data we are about to send -----------------------------------------------------------
         uint32_t converted_len = htonl(Packet.Header.len);
         if(sendto(s, &converted_len, sizeof(sizeof(uint32_t)), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
@@ -123,7 +128,7 @@ int main(void)
         }
         printf("The length %d was passed to server...\n", Packet.Header.len);
         
-        // Now proceed with sending the actual data
+        // Now proceed with sending the actual data -------------------------------------------------------------------
         if(sendto(s, &Packet.data, (int) strlen(Packet.data), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending data...\n");
@@ -131,7 +136,7 @@ int main(void)
         }
         printf("Send chunk of %d bytes with content: %s\n", Packet.Header.len, Packet.data);
         
-        // Wait for ACK1
+        // Wait for ACK1 ----------------------------------------------------------------------------------------------
         if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
             printf("ACK1 not received\n");
@@ -146,7 +151,7 @@ int main(void)
             break;
         }
         
-        // Process process checksum received to be sure of data integrity
+        // Process process checksum received to be sure of data integrity----------------------------------------------
         uint32_t recvChecksum;
         if(recvfrom(s, &recvChecksum, sizeof(recvChecksum), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
@@ -157,7 +162,7 @@ int main(void)
         printf("Checksum from server: %d\n", recvChecksum);
         printf("Checksum calculated: %d\n", Packet.Header.cksum);
         
-        // Compare checksums to assuse data integrity
+        // Compare checksums to assuse data integrity -----------------------------------------------------------------
         if(recvChecksum != Packet.Header.cksum)
         {
             printf("Result: Checksum NOT OK!\n");
@@ -168,6 +173,7 @@ int main(void)
             printf("Result: Checksum OK!\n");
             retry = 0;
         }
+         */
     }
     
     close(s);
