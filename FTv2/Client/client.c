@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
-#include <tiff.h>
 
 #define SERVER "127.0.0.1"
 #define BUFF_LEN 8  //Max length of buffer
@@ -75,7 +74,7 @@ int main(void)
     
     if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
-        die("socket");
+        die("Can allocate socket identifier!");
     }
     
     memset((char *) &si_other, 0, sizeof(si_other));
@@ -126,7 +125,7 @@ int main(void)
             continue;
         }
         printf("Send chunk of %d bytes with content: %s\n", Packet.Header.len, Packet.data);
-    
+        
         // Wait for ACK1
         if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
@@ -135,6 +134,12 @@ int main(void)
         }
         Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
         printf("ACK1 received with value %d\n", Packet.Header.seq_ack);
+        
+        if(strlen(Packet.data) == 0)        // if empty packet was send this mean that program can exit
+        {
+            printf("Final packed send! Program will exit now!\n");
+            break;
+        }
         
         // Process process checksum received to be sure of data integrity
         uint32_t recvChecksum;
