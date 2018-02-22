@@ -110,15 +110,6 @@ int main(void)
         }
         printf("ACK0 send with value %d\n", Packet.Header.seq_ack);
         
-        // Wait for ACK1
-        if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
-        {
-            printf("ACK1 not received\n");
-            continue;
-        }
-        Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
-        printf("ACK1 received with value %d\n", Packet.Header.seq_ack);
-        
         // Now send the length of data we are about to send
         uint32_t converted_len = htonl(Packet.Header.len);
         if(sendto(s, &converted_len, sizeof(sizeof(uint32_t)), 0, (struct sockaddr *) &si_other, slen) == -1)
@@ -135,6 +126,15 @@ int main(void)
             continue;
         }
         printf("Send chunk of %d bytes with content: %s\n", Packet.Header.len, Packet.data);
+    
+        // Wait for ACK1
+        if(recvfrom(s, &Packet.Header.seq_ack, sizeof(Packet.Header.seq_ack), 0, (struct sockaddr *) &si_other, &slen) == -1)
+        {
+            printf("ACK1 not received\n");
+            continue;
+        }
+        Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
+        printf("ACK1 received with value %d\n", Packet.Header.seq_ack);
         
         // Process process checksum received to be sure of data integrity
         uint32_t recvChecksum;

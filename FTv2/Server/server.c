@@ -76,16 +76,6 @@ int main(void)
         Packet.Header.seq_ack = ntohl(Packet.Header.seq_ack);
         printf("Got ACK0 with value %d\n", Packet.Header.seq_ack);
         
-        // Now that client asked to send data, send back ACK1
-        ++Packet.Header.seq_ack;
-        uint32_t converted_ack = htonl(Packet.Header.seq_ack);
-        if (sendto(s, &converted_ack, sizeof(converted_ack), 0, (struct sockaddr *) &si_other, slen)==-1)
-        {
-            printf("Failed to send ACK1 response...\n");
-            continue;
-        }
-        printf("ACK1 with value %d was send to client...\n", Packet.Header.seq_ack);
-        
         // Wait for data length
         if ( recvfrom(s, &Packet.Header.len, sizeof(Packet.Header.len), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
@@ -102,6 +92,16 @@ int main(void)
             continue;
         }
         printf("Data received: %s\n", Packet.data);
+    
+        // Now that client asked to send data, send back ACK1
+        ++Packet.Header.seq_ack;
+        uint32_t converted_ack = htonl(Packet.Header.seq_ack);
+        if (sendto(s, &converted_ack, sizeof(converted_ack), 0, (struct sockaddr *) &si_other, slen)==-1)
+        {
+            printf("Failed to send ACK1 response...\n");
+            continue;
+        }
+        printf("ACK1 with value %d was send to client...\n", Packet.Header.seq_ack);
         
         // Now send back checksum to make sure this is the date client sends to us
         Packet.Header.cksum = getChecksum(Packet.data);
