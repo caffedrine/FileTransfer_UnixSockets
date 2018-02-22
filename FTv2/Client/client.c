@@ -89,14 +89,19 @@ int main(void)
     
     // Packet structure
     struct PACKET Packet;
+    short retry = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
     
     while(1)
     {
-        //Now that we received ACK we can stard sending actual payload
-        printf("-----------\nEnter message (max 10): \n");
-        gets(message);
-        strcpy(Packet.data, message);
-        Packet.Header.seq_ack = 0;
+        if(!retry)
+        {
+            //Now that we received ACK we can stard sending actual payload
+            printf("-----------\nEnter message (max 10): \n");
+            gets(message);
+            strcpy(Packet.data, message);
+        }
+        
+        Packet.Header.seq_ack = (uint32_t)retry;                      // set 1 if packet is retransmitted
         Packet.Header.len = (uint32_t) strlen(Packet.data);
         Packet.Header.cksum = getChecksum(Packet);                      // also fetch checksum
         
@@ -156,10 +161,12 @@ int main(void)
         if(recvChecksum != Packet.Header.cksum)
         {
             printf("Result: Checksum NOT OK!\n");
+            retry = 1;
         }
         else
         {
             printf("Result: Checksum OK!\n");
+            retry = 0;
         }
     }
     
