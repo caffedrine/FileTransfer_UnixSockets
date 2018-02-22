@@ -34,13 +34,16 @@ void die(char *s)
 
 uint32_t getChecksum(const struct PACKET packet)
 {
+    if(strlen(packet.data) == 0)
+        return 0;
+    
     char xor_element = 'A';
     uint32_t sum = 0;
     
-    for(int i=0; i < strlen(packet.data); i++)  // iterate over all chars from string9
+    for(int i = 0; i < strlen(packet.data); i++)  // iterate over all chars from string9
     {
         char curr = packet.data[i];
-        char xored = xor_element ^ curr;
+        char xored = xor_element ^curr;
         
         // get sum of bits
         int setBitsCount = 0;
@@ -85,7 +88,7 @@ int main(void)
     // Setting up timeout
     struct timeval tv;
     tv.tv_sec = 5;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
         die("Error on socket timeout!");
     
     // Packet structure
@@ -93,19 +96,22 @@ int main(void)
     struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
     short retry = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
     
-    while(1)
+    // Input filename and generate payload
+    char outputFile[] = "output_file_test.txt\0";
+    char inputFile[] = "input.txt";
+    FILE *fp = fopen(inputFile, "rb");
+    
+    while( 1 )
     {
-        if(!retry)
+        if(!retry)      // if last packet does not require resend, grab next one
         {
-            //Now that we received ACK we can stard sending actual payload
-            printf("-----------\nEnter message (max 10): \n");
-            gets(message);
-            strcpy(PacketSend.data, message);
+            if( fread(PacketSend.data, 1, BUFF_LEN, fp) <= BUFF_LEN);
+                break;
         }
         
         // Send first packet
         PacketSend.Header.seq_ack = 0;
-        PacketSend.Header.len = (uint32_t)strlen(PacketSend.data);
+        PacketSend.Header.len = (uint32_t) strlen(PacketSend.data);
         PacketSend.Header.cksum = getChecksum(PacketSend);
         if(sendto(sockfd, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
@@ -113,10 +119,12 @@ int main(void)
             retry = 1;
             continue;
         }
-        printf("Send %d bytes: %s, checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data, PacketSend.Header.cksum, PacketSend.Header.seq_ack);
+        printf("Send %d bytes: '%s', checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data,
+               PacketSend.Header.cksum, PacketSend.Header.seq_ack);
         
         // Now wait for acknowledge
-        if(recvfrom(sockfd, &PacketRecv.Header.seq_ack, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other, &slen) == -1)
+        if(recvfrom(sockfd, &PacketRecv.Header.seq_ack, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other,
+                    &slen) == -1)
         {
             printf("ACK1 not received -> RETRY\n");
             retry = 1;
@@ -128,12 +136,17 @@ int main(void)
         {
             printf("ACK is 0 -> RETRY\n");
             retry = 1;
+            continue;
         }
-        else
+        else if(PacketRecv.Header.seq_ack == 1)
         {
             printf("Packet succesfully send!\n");
             retry = 0;
         }
+        
+        // If the packet was empty, just break
+        if(i < BUFF_LEN)    // last read from file will always be < BUFFER
+            break;
     }
     
     return 0;

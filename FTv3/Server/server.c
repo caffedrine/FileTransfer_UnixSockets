@@ -29,6 +29,9 @@ void die(char *s)
 
 uint32_t getChecksum(const struct PACKET packet)
 {
+    if(strlen(packet.data) == 0)
+        return 0;
+    
     char xor_element = 'A';
     uint32_t sum = 0;
     
@@ -112,24 +115,15 @@ int main(void)
     //keep listening for data
     while(1)
     {
-        // Listening for ACK0
-        printf("------------\nWaiting for ACK0...");
-        fflush(stdout);
-        if(recvfrom(socketfd, &PacketRecv, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other, &slen) == -1)
-        {
-            // if there was an error on receiving, return 0;
-            printf("FAILED\n");
-            return 0;
-        }
-        printf("OK: %d\n", PacketRecv.Header.seq_ack);
+        printf("--------------\nWaiting for clients/packets...\n");
         
-        // Wait for next packet which will contain data and it's length
+        // Wait for packets
         if(recvfrom(socketfd, &PacketRecv, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
             printf("Failed to receive a packet...\n");
             continue;
         }
-        printf("Got %d bytes: %s\n", PacketRecv.Header.len, PacketRecv.data);
+        printf("Got %d bytes: '%s', cksum: %d, seq_id: %d\n", PacketRecv.Header.len, PacketRecv.data, PacketRecv.Header.cksum, PacketRecv.Header.seq_ack);
         
         // Check if it is the last packet - last one should have data field empty
         if(PacketRecv.Header.len > 0)
@@ -138,7 +132,7 @@ int main(void)
             if(getChecksum(PacketRecv) == PacketRecv.Header.cksum)
             {
                 printf("OK\n");
-                PacketSend.Header.seq_ack = 0;
+                PacketSend.Header.seq_ack = 1;
                 PacketSend.Header.len = 0;
                 PacketSend.Header.cksum = getChecksum(PacketRecv);
                 if(sendto(socketfd, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
@@ -169,18 +163,21 @@ int main(void)
         }
         else    // if data length < 0 this mean that the file packets was done - write the rest to the file and then break
         {
+            PacketSend.Header.seq_ack = 1;
+            PacketSend.Header.len = 0;
+            if(sendto(socketfd, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
+            {
+                printf("Failed to send ACK1 response...\n");
+                continue;
+            }
+            printf("ACK1 with value %d was send back..\n", PacketSend.Header.seq_ack);
+            
             finalPacketReceived = 1;
         }
         
         // Write data to file or append
-        if(fp == NULL)  // file pointer is null only if we didn't get the filename yet
+        if(fp == NULL && !finalPacketReceived)  // file pointer is null only if we didn't get the filename yet
         {
-            if(finalPacketReceived)
-            {
-                fclose(fp);
-                break;
-            }
-            
             // Concat data until filename is complete:
             strcat(filename, PacketRecv.data);
             
@@ -188,7 +185,7 @@ int main(void)
             const char *p = strchr(filename, '\0');
             if(!p)                              // this mean that filename length is higher than buffer
             {
-                printf("Filename length biger than strg_buffer!");
+                printf("Filename too long!");
                 exit(1);
             }
             else
@@ -197,7 +194,6 @@ int main(void)
             }
             
             // Filename
-            char filename[index];
             for(i = 0; i < index; i++)
                 filename[i] = filename[i];
             filename[index] = '\0';
@@ -206,14 +202,11 @@ int main(void)
         }
         else
         {
-            if(finalPacketReceived)
-            {
-                fclose(fp);
-                break;
-            }
-            
             fwrite(PacketRecv.data, 1, strlen(PacketRecv.data), fp);
         }
+    
+        if(finalPacketReceived)
+            break;
     }
     
     fclose(fp);
