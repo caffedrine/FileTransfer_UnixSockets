@@ -46,7 +46,7 @@ uint32_t getChecksum(const struct PACKET packet)
         // get sum of bits
         int setBitsCount = 0;
         for(int i = 0; i <= 7; i++)
-            setBitsCount += (curr & ((i << 1) - 1));
+            setBitsCount += (xored & ((i << 1) - 1));
         
         sum += setBitsCount;
     }
