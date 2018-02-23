@@ -88,7 +88,7 @@ int main(void)
     // Setting up timeout
     struct timeval tv;
     tv.tv_sec = 5;
-    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)    // provide receive timeout
         die("Error on socket timeout!");
     
     // Packet structure
