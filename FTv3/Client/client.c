@@ -105,8 +105,11 @@ int main(void)
     {
         if(!retry)      // if last packet does not require resend, grab next one
         {
-            if( fread(PacketSend.data, 1, BUFF_LEN, fp) <= BUFF_LEN);
-                break;
+//            if( fread(PacketSend.data, 1, BUFF_LEN, fp) <= BUFF_LEN);
+//                break;
+            printf("-----------\nEnter message (max 10): \n");
+            gets(message);
+            strcpy(PacketSend.data, message);
         }
         
         // Send first packet
@@ -138,15 +141,14 @@ int main(void)
             retry = 1;
             continue;
         }
-        else if(PacketRecv.Header.seq_ack == 1)
+        
+        if(PacketRecv.Header.seq_ack == 1)
         {
             printf("Packet succesfully send!\n");
             retry = 0;
         }
         
         // If the packet was empty, just break
-        if(i < BUFF_LEN)    // last read from file will always be < BUFFER
-            break;
     }
     
     return 0;
