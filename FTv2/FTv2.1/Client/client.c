@@ -94,22 +94,26 @@ int main(void)
     // Packet structure
     struct PACKET PacketSend;
     struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
-    short retry = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
+    short retryFlag = 0, nullPacketFlag = 0;        //this flag is set whenever a packet need to be resend as it's checksum was wrong
     
     // Input filename and generate payload
     char outputFile[] = "output_file_test.txt\0";
     char inputFile[] = "input.txt";
-    FILE *fp = fopen(inputFile, "rb");
+    FILE *fp = fopen(inputFile, "r");
     
     while( 1 )
     {
-        if(!retry)      // if last packet does not require resend, grab next one
+        if(!retryFlag)      // if last packet does not require resend, grab next one
         {
-//            if( fread(PacketSend.data, 1, BUFF_LEN, fp) <= BUFF_LEN);
-//                break;
-            printf("-----------\nEnter message (max 10): \n");
-            gets(message);
-            strcpy(PacketSend.data, message);
+            if( fread(PacketSend.data, sizeof(char), BUFF_LEN, fp) <= 0)
+            {
+                memset(PacketSend.data, '\0', strlen(PacketSend.data));
+                nullPacketFlag = 1;
+            }
+            /* Or read from keyboard */
+//            printf("-----------\nEnter message (max 10): \n");
+//            gets(message);
+//            strcpy(PacketSend.data, message);
         }
         
         // Send first packet
@@ -119,7 +123,7 @@ int main(void)
         if(sendto(sockfd, &PacketSend, sizeof(PacketSend), 0, (struct sockaddr *) &si_other, slen) == -1)
         {
             printf("Error sending data length...\n");
-            retry = 1;
+            retryFlag = 1;
             continue;
         }
         printf("Send %d bytes: '%s', checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data,
@@ -130,25 +134,31 @@ int main(void)
                     &slen) == -1)
         {
             printf("ACK1 not received -> RETRY\n");
-            retry = 1;
+            retryFlag = 1;
             continue;
         }
         
-        // Chck whether right packet was received or not
+        // Check whether right packet was received or not
         if(PacketRecv.Header.seq_ack == 0)
         {
             printf("ACK is 0 -> RETRY\n");
-            retry = 1;
+            retryFlag = 1;
             continue;
         }
         
         if(PacketRecv.Header.seq_ack == 1)
         {
             printf("Packet succesfully send!\n");
-            retry = 0;
+            memset(PacketSend.data, '\0', strlen(PacketSend.data));
+            retryFlag = 0;
         }
         
         // If the packet was empty, just break
+        if(nullPacketFlag == 1)
+        {
+            break;
+        }
+        
     }
     
     return 0;

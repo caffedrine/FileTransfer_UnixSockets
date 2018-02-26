@@ -75,7 +75,7 @@ int main(void)
     socklen_t slen = sizeof(si_other);
     short finalPacketReceived = 0;      // set this flag when final packet wil length 0 was received
     FILE *fp = NULL;
-    char filename[32] = "";
+    char outputFilename[64] = "";
     
     // Used to generate random checksum validation
     srand(time(NULL));   // should only be called once
@@ -102,6 +102,7 @@ int main(void)
     // Define packet structure
     struct PACKET PacketSend;
     struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
+    strcat(outputFilename, "output.txt\0");
     
     //keep listening for data
     while(1)
@@ -170,10 +171,10 @@ int main(void)
         if(fp == NULL && !finalPacketReceived)  // file pointer is null only if we didn't get the filename yet
         {
             // Concat data until filename is complete:
-            strcat(filename, PacketRecv.data);
+            //strcat(outputFilename, PacketRecv.data);  // Only when filename is send via UDP
             
             unsigned long index;
-            const char *p = strchr(filename, '\0');
+            const char *p = strchr(outputFilename, '\0');
             if(!p)                              // this mean that filename length is higher than buffer
             {
                 printf("Filename too long!");
@@ -181,15 +182,15 @@ int main(void)
             }
             else
             {
-                index = p - filename;
+                index = p - outputFilename;
             }
             
             // Filename
             for(i = 0; i < index; i++)
-                filename[i] = filename[i];
-            filename[index] = '\0';
+                outputFilename[i] = outputFilename[i];
+            outputFilename[index] = '\0';
             
-            fp = fopen(filename, "a");    // create/rewrite file
+            fp = fopen(outputFilename, "a");    // create/rewrite file
         }
         else
         {
