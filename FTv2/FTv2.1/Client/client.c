@@ -72,8 +72,6 @@ int main(void)
     struct sockaddr_in si_other;
     int sockfd, i;
     socklen_t slen = sizeof(si_other);
-    char buf[BUFF_LEN];
-    char message[BUFF_LEN];
     
     if((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
         die("Can allocate socket identifier!");
@@ -105,15 +103,14 @@ int main(void)
     {
         if(!retryFlag)      // if last packet does not require resend, grab next one
         {
-            if( fread(PacketSend.data, sizeof(char), BUFF_LEN, fp) <= 0)
+            if( fread(PacketSend.data, sizeof(char), BUFF_LEN, fp) <= 0 )
             {
                 memset(PacketSend.data, '\0', strlen(PacketSend.data));
                 nullPacketFlag = 1;
             }
             /* Or read from keyboard */
 //            printf("-----------\nEnter message (max 10): \n");
-//            gets(message);
-//            strcpy(PacketSend.data, message);
+//            gets(PacketSend.data);
         }
         
         // Send first packet
@@ -126,8 +123,7 @@ int main(void)
             retryFlag = 1;
             continue;
         }
-        printf("Send %d bytes: '%s', checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data,
-               PacketSend.Header.cksum, PacketSend.Header.seq_ack);
+        printf("Send %d bytes: '%s', checksum: %d, seq_ack: %d\n", PacketSend.Header.len, PacketSend.data, PacketSend.Header.cksum, PacketSend.Header.seq_ack);
         
         // Now wait for acknowledge
         if(recvfrom(sockfd, &PacketRecv.Header.seq_ack, sizeof(PacketRecv), 0, (struct sockaddr *) &si_other,
@@ -153,12 +149,11 @@ int main(void)
             retryFlag = 0;
         }
         
-        // If the packet was empty, just break
+        // If the packet was empty, just break - packet become empty after after reading file
         if(nullPacketFlag == 1)
         {
             break;
         }
-        
     }
     
     return 0;

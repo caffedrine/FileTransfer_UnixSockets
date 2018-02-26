@@ -34,9 +34,9 @@ uint32_t getChecksum(const struct PACKET packet)
     if(strlen(packet.data) == 0)
         return 0;
     
-    // This is used to test the program in case of cksum fails
-    if( (rand() % 21) < 10 )    // if a random number from 0-20 is lower than 10 then return a pseudo-checksum
-        return 123;
+    // This is used to test the program in case of cksum fails - it provides random cksum fails
+//    if( (rand() % 21) < 10 )    // if a random number from 0-20 is lower than 10 then return a pseudo-checksum
+//        return 123;
     
     char xor_element = 'A';
     uint32_t sum = 0;
@@ -73,12 +73,12 @@ int main(void)
     struct sockaddr_in si_me, si_other;
     int socketfd, i;
     socklen_t slen = sizeof(si_other);
-    short finalPacketReceived = 0;      // set this flag when final packet wil length 0 was received
+    short finalPacketReceivedFlag = 0;      // set this flag when final packet wil length 0 was received
     FILE *fp = NULL;
     char outputFilename[64] = "";
     
     // Used to generate random checksum validation
-    srand(time(NULL));   // should only be called once
+    srand((uint32_t)time(NULL));   // should only be called once
     
     //create a UDP socket
     if((socketfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
@@ -102,7 +102,7 @@ int main(void)
     // Define packet structure
     struct PACKET PacketSend;
     struct PACKET PacketRecv;// = (struct PACKET *)malloc(sizeof(struct PACKET));
-    strcat(outputFilename, "output.txt\0");
+    strcat(outputFilename, "output.txt\0"); // or argv
     
     //keep listening for data
     while(1)
@@ -164,17 +164,17 @@ int main(void)
             }
             printf("ACK1 with value %d was send back..\n", PacketSend.Header.seq_ack);
             
-            finalPacketReceived = 1;
+            finalPacketReceivedFlag = 1;
         }
         
         // Write data to file or append
-        if(fp == NULL && !finalPacketReceived)  // file pointer is null only if we didn't get the filename yet
+        if(fp == NULL && !finalPacketReceivedFlag)  // file pointer is null only if we didn't get the filename yet
         {
-            fp = fopen(outputFilename, "a");
+            fp = fopen(outputFilename, "w");
             fwrite(PacketRecv.data, 1, strlen(PacketRecv.data), fp);
             
             
-            /* If filename is send at the beginning, use this */
+            /* If filename is send at the beginning, use this code instead*/
             /*
             // Concat data until filename is complete:
             strcat(outputFilename, PacketRecv.data);  // Only when filename is send via UDP
@@ -205,7 +205,7 @@ int main(void)
             memset(PacketRecv.data, '\0', strlen(PacketRecv.data));
         }
     
-        if(finalPacketReceived)
+        if(finalPacketReceivedFlag)
         {
             fclose(fp);
             break;
