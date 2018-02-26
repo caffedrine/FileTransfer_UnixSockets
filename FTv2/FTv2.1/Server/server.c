@@ -68,24 +68,6 @@ void checksumTest()
     exit(1);
 }
 
-uint32_t waitACK0(int *socketfd, struct sockaddr_in *si_other, struct HEADER *Header)
-{
-    printf("-------------\nWaiting for ACK0...");
-    fflush(stdout);
-    
-    socklen_t slen = sizeof(si_other);
-    if(recvfrom(*socketfd, &Header->seq_ack, sizeof(Header->seq_ack), 0, (struct sockaddr *) si_other, &slen) == -1)
-    {
-        // if there was an error on receiving, return 0;
-        printf("FAILED\n");
-        return 0;
-    }
-    Header->seq_ack = ntohl(Header->seq_ack);
-    printf("OK: Got ACK0 with value %d\n", Header->seq_ack);
-    
-    return Header->seq_ack;
-}
-
 int main(void)
 {
     struct sockaddr_in si_me, si_other;
