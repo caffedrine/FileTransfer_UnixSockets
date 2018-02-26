@@ -1,9 +1,11 @@
-#include<stdio.h> //printf
-#include<string.h> //memset
-#include<stdlib.h> //exit(0);
+#include<stdio.h>   //printf
+#include<string.h>  //memset
+#include<stdlib.h>  //exit(0);
 #include<arpa/inet.h>
 #include<sys/socket.h>
 #include <elf.h>
+#include <sys/time.h>
+#include <time.h>
 
 #define UDP_BUFF_LEN    8          // Max length of buffer for UDP data
 #define PORT            5555       // The port on which to listen for incoming data
@@ -31,6 +33,10 @@ uint32_t getChecksum(const struct PACKET packet)
 {
     if(strlen(packet.data) == 0)
         return 0;
+    
+    // This is used to test the program in case of cksum fails
+    if( (rand() % 21) < 10 )    // if a random number from 0-20 is lower than 10 then return a pseudo-checksum
+        return 123;
     
     char xor_element = 'A';
     uint32_t sum = 0;
@@ -88,6 +94,9 @@ int main(void)
     short finalPacketReceived = 0;      // set this flag when final packet wil length 0 was received
     FILE *fp = NULL;
     char filename[32] = "";
+    
+    // Used to generate random checksum validation
+    srand(time(NULL));   // should only be called once
     
     //create a UDP socket
     if((socketfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
