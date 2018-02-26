@@ -170,8 +170,14 @@ int main(void)
         // Write data to file or append
         if(fp == NULL && !finalPacketReceived)  // file pointer is null only if we didn't get the filename yet
         {
+            fp = fopen(outputFilename, "a");
+            fwrite(PacketRecv.data, 1, strlen(PacketRecv.data), fp);
+            
+            
+            /* If filename is send at the beginning, use this */
+            /*
             // Concat data until filename is complete:
-            //strcat(outputFilename, PacketRecv.data);  // Only when filename is send via UDP
+            strcat(outputFilename, PacketRecv.data);  // Only when filename is send via UDP
             
             unsigned long index;
             const char *p = strchr(outputFilename, '\0');
@@ -191,16 +197,20 @@ int main(void)
             outputFilename[index] = '\0';
             
             fp = fopen(outputFilename, "a");    // create/rewrite file
+             */
         }
         else
         {
             fwrite(PacketRecv.data, 1, strlen(PacketRecv.data), fp);
+            memset(PacketRecv.data, '\0', strlen(PacketRecv.data));
         }
     
         if(finalPacketReceived)
+        {
+            fclose(fp);
             break;
+        }
     }
     
-    fclose(fp);
     return 0;
 }
